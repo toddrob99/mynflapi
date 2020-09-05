@@ -98,9 +98,10 @@ QUERIES = {
             "gameTime%20gsisId%20slug%20awayTeam%7Babbreviation%20fullName%20id%20"
             "nickName%20cityStateRegion%20franchise%7Bid%20slug%20currentLogo%7Burl"
             "%7D%7D%7DhomeTeam%7Babbreviation%20fullName%20id%20nickName%20"
-            "cityStateRegion%20franchise%7Bid%20slug%20currentLogo%7Burl%7D%7D%7D"
-            "week%7BseasonValue%20id%20seasonType%20weekValue%20weekType%7DradioLinks"
-            "%20ticketUrl%20venue%7BfullName%20city%20state%7DgameDetailId%7D%7D%7D"
+            "cityStateRegion%20division%20conference%20franchise%7Bid%20slug%20"
+            "currentLogo%7Burl%7D%7D%7Dweek%7BseasonValue%20id%20seasonType%20"
+            "weekValue%20weekType%7DradioLinks%20ticketUrl%20venue%7BfullName%20"
+            "city%20state%7DgameDetailId%7D%7D%7D"
         ),
         "gameDetails": (
             "query%7Bviewer%7BgameDetail(id%3A%22{param_gameDetailId}%22)%7Bid%20"
@@ -174,6 +175,13 @@ QUERIES = {
             "puntReturnsAverageYards%20puntReturnsFairCatches%20puntReturnsLong%20"
             "puntReturnsTouchdowns%7D%7D%7D%7D%7D%7D%7D"
         ),
+        "teamById": (
+            "query%7Bviewer%7Bteam(id%3A%22{param_teamId}%22)%7Bid%20abbreviation%20"
+            "fullName%20id%20nickName%20cityStateRegion%20franchise%7Bid%20slug%20"
+            "currentLogo%7Burl%7D%7D%20season%7Bid%20season%7D%20division%20players%7B"
+            "id%20status%20position%20jerseyNumber%20person%7BfirstName%20lastName%20"
+            "displayName%20highSchool%7D%7D%20injuries%7Bid%7D%7D%7D%7D"
+        ),
     },
 }
 
@@ -193,9 +201,11 @@ DEFAULT_FIELDS = {
     ),
     "games": (
         "{week{id,season,weekOrder,seasonType,week,weekType,name},id,type,"
-        "lastModifiedDate,gameTime,gameStatus,homeTeam{id,abbr,fullName,nickName,type,"
-        "division{id,abbr}},visitorTeam{id,abbr,fullName,nickName,type,division{id,"
-        "abbr}},homeTeamScore,visitorTeamScore,networkChannel,venue{id,type,name}}"
+        "lastModifiedDate,gameTime,gameStatus,homeTeam{id,season,fullName,nickName,"
+        "cityStateRegion,abbr,teamType,conference{abbr},division{abbr}},visitorTeam{"
+        "id,season,fullName,nickName,cityStateRegion,abbr,teamType,conference{abbr},"
+        "division{abbr}},homeTeamScore,visitorTeamScore,networkChannel,venue{id,type,"
+        "name}}"
     ),
 }
 
@@ -215,7 +225,7 @@ class APISession(object):
                 API_BASE_URL + endpoint + query, data=data, headers=headers
             )
         if r.status_code not in [200, 201]:
-            raise ValueError(f"Request failed. Status Code: {r.status_code}.")
+            r.raise_for_status()
         #  elif r.status_code == 429:  # Find status code for too many requests/wait
         #      # if wait:
         #      #     wait(r.json.get("wait_time"))  # Find the wait time in the response
@@ -302,6 +312,13 @@ class APISession(object):
             )
             + "&fs="
             + fields,
+        )
+
+    def teamById_shield(self, teamId, query=None):
+        if not query:
+            query = QUERIES["shield"]["teamById"].format(param_teamId=teamId)
+        return self.api_call(
+            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
         )
 
     def standings(
